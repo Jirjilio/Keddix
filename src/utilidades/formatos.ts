@@ -95,6 +95,7 @@ export function traducirErrorFirebase(error: unknown): string {
     'auth/too-many-requests': 'Demasiados intentos. Espera un momento y vuelve a probar.',
     'auth/network-request-failed': 'No hay conexión. Comprueba tu red e inténtalo de nuevo.',
     'permission-denied': 'No tienes permiso para hacer esa acción.',
+    'failed-precondition': 'Falta terminar la configuración de la base de datos. Avísame y la arreglo.',
   }
 
   return (
