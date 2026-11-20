@@ -116,6 +116,28 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
+    // Consulta global de pertenencias ("mis grupos")
+    // ------------------------------------------------------------------------
+    // La pantalla de inicio necesita listar los grupos del usuario. Para ello
+    // hace una "collection group query": busca en TODAS las subcolecciones
+    // llamadas members y filtra por el campo uid == nuestro uid.
+    //
+    // Las reglas de seguridad NO filtran resultados: Firestore rechaza una
+    // consulta si existe alguna posibilidad de que devuelva un documento no
+    // permitido. La regla de más abajo para members combina el id del documento
+    // con esMiembro(grupoId), así que Firestore no puede demostrar que la
+    // consulta global es segura y la deniega con permission-denied.
+    //
+    // Añadimos esta regla adicional que coincide exactamente con el filtro de
+    // la consulta (resource.data.uid == miUid()). No abre los miembros de los
+    // demás grupos: solo permite leer documentos cuyo campo uid sea el nuestro.
+    // La regla específica de groups/{grupoId}/members sigue permitiendo que
+    // los compañeros de un grupo se vean entre sí.
+    match /{path=**}/members/{usuarioId} {
+      allow read: if iniciadoSesion() && resource.data.uid == miUid();
+    }
+
+    // ------------------------------------------------------------------------
     // Grupos
     // ------------------------------------------------------------------------
 
