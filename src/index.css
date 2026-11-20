@@ -1,0 +1,86 @@
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: #e2e8f0;
+  background: #0f172a;
+  font-synthesis: none;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.page {
+  width: min(100% - 2rem, 48rem);
+  margin: 0 auto;
+  padding: 3rem 0;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: #1e293b;
+  font-size: 2rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+}
+
+.badge {
+  margin-left: auto;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.card {
+  padding: 1.75rem;
+  border: 1px solid #1e293b;
+  border-radius: 1rem;
+  background: #111c31;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.card p {
+  color: #cbd5e1;
+}
+
+.checklist {
+  margin: 1.25rem 0 0;
+  padding-left: 1.25rem;
+  color: #a5b4fc;
+}
+
+.checklist li + li {
+  margin-top: 0.35rem;
+}
