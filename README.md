@@ -115,3 +115,41 @@ invites/{codigo}                             Código -> grupo, activo o no
 
 Cuando se active el chat, los mensajes irán en
 `groups/{grupoId}/plans/{planId}/messages/{mensajeId}` con la forma de `Mensaje`.
+
+## 5. Copias de seguridad manuales (gratis)
+
+Las copias automáticas gestionadas por Firebase requieren el plan Blaze (de pago).
+Alternativa gratuita: dos scripts que usan la Admin SDK y guardan/leen un JSON en tu PC.
+
+**Preparación (una vez):**
+
+1. Firebase Console → Configuración del proyecto → **Cuentas de servicio**.
+2. **Generar nueva clave privada** (se descarga un `.json`).
+3. Cópialo en la raíz del proyecto como `serviceAccount.json`.
+   Está en `.gitignore`, así que **nunca** se sube a GitHub. Es un secreto: quien
+   lo tenga puede leer y escribir en tu base de datos saltándose las reglas.
+
+**Hacer una copia** (por ejemplo cada dos semanas):
+
+```bash
+npm run backup
+```
+
+Crea `backups/backup-AAAA-MM-DD-HHmm.json` con todos los documentos y sus
+subcolecciones. Guarda además ese archivo fuera del PC (disco externo, Drive…).
+
+**Ver qué haría una restauración** (sin escribir nada):
+
+```bash
+npm run restore -- backups/backup-2026-12-01-0930.json
+```
+
+**Aplicar la restauración** (sobrescribe los documentos con la misma ruta):
+
+```bash
+npm run restore -- backups/backup-2026-12-01-0930.json --confirm
+```
+
+La restauración no borra documentos nuevos creados después de la copia; simplemente
+vuelve a escribir los que había en ella. Las lecturas de una copia entran en la
+capa gratuita de Spark (50.000/día), más que suficientes para este proyecto.
