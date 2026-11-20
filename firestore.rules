@@ -1,0 +1,232 @@
+rules_version = '2';
+
+// ============================================================================
+// REGLAS DE SEGURIDAD DE FIRESTORE
+// ============================================================================
+// No hay servidor propio: estas reglas son la "puerta" de la base de datos.
+// Cualquier persona con la configuración pública de Firebase puede intentar
+// leer o escribir, pero aquí decidimos qué operaciones están permitidas.
+//
+// El lenguaje de reglas SOLO admite comentarios de una línea con "//".
+// Por eso no usamos bloques /* ... */ como en TypeScript.
+//
+// Resumen de permisos:
+// - Solo usuarios autenticados pueden usar la aplicación.
+// - Solo los miembros de un grupo ven ese grupo y sus planes.
+// - Cualquier miembro puede crear planes y votar opciones.
+// - Solo el creador de un plan (y sus editores) puede modificarlo.
+// - Solo el creador del plan puede cambiar la lista de editores.
+// - Solo el dueño del grupo puede gestionar la invitación.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Funciones auxiliares
+    // ------------------------------------------------------------------------
+
+    // Devuelve true si hay alguien identificado.
+    function iniciadoSesion() {
+      return request.auth != null;
+    }
+
+    // uid del usuario que hace la petición. Solo se usa después de comprobar
+    // que hay sesión, para evitar errores con request.auth == null.
+    function miUid() {
+      return request.auth.uid;
+    }
+
+    // Rutas completas de los documentos que consultamos varias veces.
+    // $(database) se sustituye por el id de la base de datos por defecto.
+    function rutaGrupo(grupoId) {
+      return /databases/$(database)/documents/groups/$(grupoId);
+    }
+
+    function rutaMiembro(grupoId, usuarioId) {
+      return /databases/$(database)/documents/groups/$(grupoId)/members/$(usuarioId);
+    }
+
+    function rutaPlan(grupoId, planId) {
+      return /databases/$(database)/documents/groups/$(grupoId)/plans/$(planId);
+    }
+
+    function rutaInvitacion(codigo) {
+      return /databases/$(database)/documents/invites/$(codigo);
+    }
+
+    // Pertenencia al grupo: existe un documento members con nuestro uid.
+    function esMiembro(grupoId) {
+      return iniciadoSesion() && exists(rutaMiembro(grupoId, miUid()));
+    }
+
+    // El "dueño" es el primer miembro (rol owner), no necesariamente quien
+    // aparece como creadoPor (aunque en nuestra app coinciden).
+    function esDueno(grupoId) {
+      return esMiembro(grupoId)
+        && get(rutaMiembro(grupoId, miUid())).data.rol == 'owner';
+    }
+
+    // Creador del grupo: se usa al dar de alta al primer miembro, cuando
+    // todavía no existe ningún documento members que consultar.
+    function esCreadorDelGrupo(grupoId) {
+      return iniciadoSesion()
+        && exists(rutaGrupo(grupoId))
+        && get(rutaGrupo(grupoId)).data.creadoPor == miUid();
+    }
+
+    // Un código sirve si existe, está activo y apunta a este grupo.
+    function invitacionEsValida(codigo, grupoId) {
+      return codigo is string
+        && exists(rutaInvitacion(codigo))
+        && get(rutaInvitacion(codigo)).data.activa == true
+        && get(rutaInvitacion(codigo)).data.grupoId == grupoId;
+    }
+
+    // ------------------------------------------------------------------------
+    // Usuarios
+    // ------------------------------------------------------------------------
+
+    match /users/{usuarioId} {
+      // Cualquier usuario autenticado puede ver nombres de otros usuarios
+      // (necesario para mostrar quién creó cada plan o quién votó qué).
+      allow read: if iniciadoSesion();
+
+      // Cada persona solo puede crear y mantener SU propio documento.
+      allow create, update: if iniciadoSesion()
+        && usuarioId == miUid()
+        && request.resource.data.uid == miUid();
+
+      // No se borran perfiles desde la aplicación.
+      allow delete: if false;
+    }
+
+    match /usernames/{usuarioNormalizado} {
+      // Lectura pública: hace falta poder resolver "@usuario" a email ANTES
+      // de iniciar sesión, cuando todavía no hay request.auth.
+      allow read: if true;
+
+      allow create: if iniciadoSesion()
+        && request.resource.data.uid == miUid()
+        && request.resource.data.nombreUsuarioNormalizado == usuarioNormalizado
+        && request.resource.data.correo == request.auth.token.email;
+
+      // Los nombres de usuario no se cambian ni se borran desde la app.
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // Grupos
+    // ------------------------------------------------------------------------
+
+    match /groups/{grupoId} {
+      // Ver un grupo exige pertenecer a él.
+      allow read: if esMiembro(grupoId);
+
+      // Crear un grupo: cualquiera con sesión, siendo el creador.
+      allow create: if iniciadoSesion()
+        && request.resource.data.creadoPor == miUid()
+        && request.resource.data.invitacionActiva == true;
+
+      // Solo el dueño cambia el nombre, la descripción o la invitación.
+      allow update, delete: if esDueno(grupoId);
+
+      // ---- Miembros del grupo ----
+      match /members/{usuarioId} {
+        // Uno mismo puede verse; los compañeros ven al resto del grupo.
+        allow read: if iniciadoSesion()
+          && (usuarioId == miUid() || esMiembro(grupoId));
+
+        // Alta como dueño al crear el grupo, o alta como socio con un código
+        // de invitación válido que apunte a este grupo.
+        allow create: if iniciadoSesion()
+          && usuarioId == miUid()
+          && request.resource.data.uid == miUid()
+          && request.resource.data.grupoId == grupoId
+          && (
+               (esCreadorDelGrupo(grupoId) && request.resource.data.rol == 'owner')
+               ||
+               (request.resource.data.rol == 'member'
+                 && invitacionEsValida(
+                      request.resource.data.codigoInvitacionUsado,
+                      grupoId
+                    ))
+             );
+
+        // Uno mismo puede salirse del grupo; el dueño no puede abandonarlo
+        // (debe disolverse el grupo o transferirlo, que hoy no está expuesto).
+        allow delete: if iniciadoSesion()
+          && usuarioId == miUid()
+          && resource.data.rol != 'owner';
+      }
+
+      // ---- Planes ----
+      match /plans/{planId} {
+        allow read: if esMiembro(grupoId);
+
+        // Cualquier miembro puede proponer un plan. Nace sin editores asignados
+        // y en estado "propuesta" para impedir saltarse los permisos.
+        allow create: if esMiembro(grupoId)
+          && request.resource.data.creadoPor == miUid()
+          && request.resource.data.editores == []
+          && request.resource.data.estado == 'propuesta';
+
+        // Editar: creador o editores asignados. El creador y el grupo son
+        // inmutables (no se pueden "robar" planes). Cambiar 'editores' es
+        // privilegio EXCLUSIVO del creador del plan.
+        allow update: if esMiembro(grupoId)
+          && resource.data.creadoPor == request.resource.data.creadoPor
+          && resource.data.grupoId == request.resource.data.grupoId
+          && (resource.data.creadoPor == miUid() || miUid() in resource.data.editores)
+          && (
+               resource.data.creadoPor == miUid()
+               || request.resource.data.editores == resource.data.editores
+             );
+
+        // Borrar un plan: solo quien lo creó.
+        allow delete: if esMiembro(grupoId)
+          && resource.data.creadoPor == miUid();
+
+        // ---- Votos ----
+        match /votes/{votanteId} {
+          allow read: if esMiembro(grupoId);
+
+          // Cada miembro guarda su voto en un documento con su uid, así que
+          // votar dos veces solo sobrescribe. Solo se puede votar una opción
+          // que exista en la copia idsOpciones del plan.
+          allow create, update: if esMiembro(grupoId)
+            && votanteId == miUid()
+            && request.resource.data.uid == miUid()
+            && request.resource.data.opcionId
+               in get(rutaPlan(grupoId, planId)).data.idsOpciones;
+
+          // Cada uno puede retirar su propio voto.
+          allow delete: if iniciadoSesion() && votanteId == miUid();
+        }
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Invitaciones
+    // ------------------------------------------------------------------------
+
+    match /invites/{codigo} {
+      // Hace falta estar identificado para saber a qué grupo pertenece el
+      // código al intentar entrar.
+      allow read: if iniciadoSesion();
+
+      // Crear o desactivar invitaciones: solo el creador del grupo.
+      allow create: if iniciadoSesion()
+        && request.resource.data.creadoPor == miUid()
+        && esCreadorDelGrupo(request.resource.data.grupoId);
+
+      allow update: if iniciadoSesion()
+        && resource.data.creadoPor == miUid()
+        && esCreadorDelGrupo(resource.data.grupoId);
+
+      // Se desactivan, pero no se borran: así el enlace antiguo da un error
+      // claro en lugar de parecer que el grupo no existe.
+      allow delete: if false;
+    }
+  }
+}
