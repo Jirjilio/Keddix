@@ -17,6 +17,7 @@ export type EstadoPlan = 'propuesta' | 'confirmada'
 /** Un usuario de la aplicación (documento users/{uid}). */
 export interface Usuario {
   uid: string
+  /** Al registrarse coincide con nombreUsuario; más adelante se podrá personalizar. */
   nombreVisible: string
   nombreUsuario: string
   nombreUsuarioNormalizado: string

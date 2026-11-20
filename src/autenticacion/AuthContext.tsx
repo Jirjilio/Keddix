@@ -45,7 +45,6 @@ interface ContextoAutenticacion {
   registrarUsuario: (
     correo: string,
     nombreUsuario: string,
-    nombreVisible: string,
     contrasena: string,
   ) => Promise<void>
   iniciarSesion: (identificador: string, contrasena: string) => Promise<void>
@@ -84,7 +83,6 @@ export function ProveedorAutenticacion({ children }: { children: ReactNode }) {
   async function registrarUsuario(
     correo: string,
     nombreUsuario: string,
-    nombreVisible: string,
     contrasena: string,
   ): Promise<void> {
     const normalizado = normalizarNombreUsuario(nombreUsuario)
@@ -110,13 +108,16 @@ export function ProveedorAutenticacion({ children }: { children: ReactNode }) {
         contrasena,
       )
       usuarioCreado = credencial.user
-      await updateProfile(usuarioCreado, { displayName: nombreVisible.trim() })
+      // Por ahora no pedimos un nombre aparte: el nombre de usuario es el que
+      // se muestra y el que sirve para entrar. Cuando añadamos personalización,
+      // aquí se podrá cambiar el displayName sin tocar el usuario de acceso.
+      await updateProfile(usuarioCreado, { displayName: nombreUsuario.trim() })
 
       // Un batch escribe varios documentos de forma atómica: o todos o ninguno.
       const lote = writeBatch(baseDeDatos)
       lote.set(doc(baseDeDatos, 'users', usuarioCreado.uid), {
         uid: usuarioCreado.uid,
-        nombreVisible: nombreVisible.trim(),
+        nombreVisible: nombreUsuario.trim(),
         nombreUsuario: nombreUsuario.trim(),
         nombreUsuarioNormalizado: normalizado,
         correo: correo.trim().toLowerCase(),

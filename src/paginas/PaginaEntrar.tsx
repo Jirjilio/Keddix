@@ -25,7 +25,6 @@ export function PaginaEntrar() {
   const [identificador, setIdentificador] = useState('')
   const [correo, setCorreo] = useState('')
   const [nombreUsuario, setNombreUsuario] = useState('')
-  const [nombreVisible, setNombreVisible] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [repetirContrasena, setRepetirContrasena] = useState('')
   const [procesando, setProcesando] = useState(false)
@@ -62,7 +61,7 @@ export function PaginaEntrar() {
         if (contrasena !== repetirContrasena) {
           throw new Error('Las contraseñas no coinciden.')
         }
-        await registrarUsuario(correo, nombreUsuario, nombreVisible, contrasena)
+        await registrarUsuario(correo, nombreUsuario, contrasena)
         navegar(destinoTrasEntrar, { replace: true })
       } else {
         await enviarCorreoRecuperacion(correo)
@@ -142,16 +141,6 @@ export function PaginaEntrar() {
           {modo === 'registrarse' && (
             <>
               <div className="campo">
-                <label htmlFor="nombre-visible">Tu nombre</label>
-                <input
-                  id="nombre-visible"
-                  type="text"
-                  value={nombreVisible}
-                  placeholder="Cómo te verán tus amigos"
-                  onChange={(evento) => setNombreVisible(evento.target.value)}
-                />
-              </div>
-              <div className="campo">
                 <label htmlFor="usuario-nuevo">Nombre de usuario</label>
                 <input
                   id="usuario-nuevo"
@@ -161,6 +150,7 @@ export function PaginaEntrar() {
                   placeholder="juan (3–20 letras, números, . _ -)"
                   onChange={(evento) => setNombreUsuario(evento.target.value)}
                 />
+                <p className="ayuda">Será tu nombre visible y te servirá para entrar con @usuario.</p>
               </div>
               <div className="campo">
                 <label htmlFor="correo-nuevo">Correo electrónico</label>
