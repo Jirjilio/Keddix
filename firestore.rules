@@ -197,6 +197,8 @@ service cloud.firestore {
           allow create, update: if esMiembro(grupoId)
             && votanteId == miUid()
             && request.resource.data.uid == miUid()
+            // Una vez confirmada la fecha, la votación queda cerrada.
+            && get(rutaPlan(grupoId, planId)).data.estado == 'propuesta'
             && request.resource.data.opcionId
                in get(rutaPlan(grupoId, planId)).data.idsOpciones;
 

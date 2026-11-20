@@ -32,9 +32,11 @@ npm run dev
 2. **Authentication → Sign-in method**: activa *Correo electrónico/contraseña*.
 3. **Firestore Database**: crea la base de datos (modo producción).
 4. **Reglas**: pega el contenido de `firestore.rules` en *Firestore → Reglas* y publica.
-5. **Configuración del proyecto → Tus apps → App web**: copia el objeto `firebaseConfig`.
-6. Copia `.env.example` a `.env.local` y rellena las seis variables `VITE_FIREBASE_*`.
-7. Reinicia `npm run dev`.
+5. **Authentication → Configuración → Dominios autorizados**: añade `jirjilio.github.io`
+   (si no, Firebase bloqueará el acceso desde la web publicada; `localhost` ya viene).
+6. **Configuración del proyecto → Tus apps → App web**: copia el objeto `firebaseConfig`.
+7. Copia `.env.example` a `.env.local` y rellena las seis variables `VITE_FIREBASE_*`.
+8. Reinicia `npm run dev`.
 
 > Los valores de `firebaseConfig` no son secretos: Firebase los envía al navegador.
 > La seguridad real está en `firestore.rules`, no en ocultarlos.
