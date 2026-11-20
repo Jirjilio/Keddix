@@ -4,7 +4,7 @@ Aplicación web para organizar quedadas entre grupos de amigos.
 
 ## Estado actual
 
-Fase 1: esqueleto mínimo (React + Vite + TypeScript) y despliegue automático en GitHub Pages.
+Fase 1: esqueleto mínimo (React + Vite + TypeScript) y despliegue en GitHub Pages.
 
 ## Desarrollo
 
@@ -26,7 +26,7 @@ a `.github/workflows/deploy.yml` cuando el token de GitHub tenga el permiso `wor
 La ruta base (`/<nombre-del-repo>/`) se calcula sola en el workflow, así que no hace falta
 editar `vite.config.ts`.
 
-La URL final será `https://<tu-usuario>.github.io/<nombre-del-repo>/`.
+La URL de este proyecto es `https://jirjilio.github.io/Keddix/`.
 
 ## Próximas fases
 
